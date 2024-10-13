@@ -1,0 +1,4 @@
+venv
+.idea
+db.sqlite3
+qurilish_app/migrations
