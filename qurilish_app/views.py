@@ -36,7 +36,7 @@ class LoginApiView(GenericAPIView):
             if serializer.is_valid():
                 email = serializer.data['email']
                 password = serializer.data['password']
-                user = authenticate(email=email, password=password)
+                user = authenticate(username=email, password=password)
                 if user is None:
                     return Response({
                         'status': 400,
@@ -46,10 +46,10 @@ class LoginApiView(GenericAPIView):
                 else:
                     refresh = RefreshToken.for_user(user)
 
-                    return {
+                    return Response({
                         'refresh': str(refresh),
                         'access': str(refresh.access_token),
-                    }
+                    })
         except Exception as e:
             print(e)
 
