@@ -1,5 +1,6 @@
 from django.contrib.auth.models import User
 from rest_framework.serializers import ModelSerializer
+from rest_framework import serializers
 
 
 class LogInSerializer(ModelSerializer):
@@ -23,3 +24,12 @@ class RegisterSerializer(ModelSerializer):
             last_name=validated_data.get('last_name', ''))
 
         return user
+
+
+class PasswordChangeSerializer(serializers.Serializer):
+    old_password = serializers.CharField(required=True)
+    new_password = serializers.CharField(required=True)
+
+
+class PasswordResetViaEmailSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=True)

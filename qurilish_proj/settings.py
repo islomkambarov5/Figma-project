@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'djoser',
     'rest_framework.authtoken',
     'rest_framework_simplejwt',
+    'django_rest_passwordreset',
     'qurilish_app.apps.QurilishAppConfig',
 ]
 
