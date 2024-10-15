@@ -57,24 +57,12 @@ class LoginApiView(GenericAPIView):
 @permission_classes([permissions.IsAuthenticated])
 class UserLogoutApiView(RetrieveAPIView):
     def get(self, *args, **kwargs):
-        logout(self.request)
-        return Response({'message': 'Log outed successfully.'})
+        try:
+            logout(self.request)
+            return Response({'message': 'Log outed successfully.'})
+        except:
+            return Response({'status': 400, 'message': 'Something went wrong, please try again'})
 
-
-# @api_view(['POST'])
-# @permission_classes([permissions.IsAuthenticated])
-# def change_password(request):
-#     if request.method == 'POST':
-#         serializer = PasswordChangeSerializer(data=request.data)
-#         if serializer.is_valid():
-#             user = request.user
-#             if user.check_password(serializer.data.get('old_password')):
-#                 user.set_password(serializer.data.get('new_password'))
-#                 user.save()
-#                 update_session_auth_hash(request, user)  # To update session after password change
-#                 return Response({'message': 'Password changed successfully.'}, status=status.HTTP_200_OK)
-#             return Response({'error': 'Incorrect old password.'}, status=status.HTTP_400_BAD_REQUEST)
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @permission_classes([permissions.IsAuthenticated])
 class PasswordChangeApiView(GenericAPIView):
@@ -85,11 +73,10 @@ class PasswordChangeApiView(GenericAPIView):
         serializer = PasswordChangeSerializer(data=data)
         if serializer.is_valid():
             user = request.user
-            print(user.check_password(serializer.data.get('old_password')))
             if user.check_password(serializer.data.get('old_password')):
                 user.set_password(serializer.data.get('new_password'))
                 user.save()
-                update_session_auth_hash(request, user)  # To update session after password change
+                update_session_auth_hash(request, user)
                 return Response({'message': 'Password changed successfully.'}, status=status.HTTP_200_OK)
             return Response({'error': 'Incorrect old password.'}, status=status.HTTP_400_BAD_REQUEST)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
