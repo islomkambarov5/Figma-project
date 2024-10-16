@@ -15,6 +15,7 @@ def password_reset_token_created(sender, instance, reset_password_token, *args, 
         'current_user': reset_password_token.user,
         'username': reset_password_token.user.username,
         'email': reset_password_token.user.email,
+        'token': reset_password_token.key,
         'reset_password_url': "{}?token={}".format(
             instance.request.build_absolute_uri(reverse('password_reset:reset-password-confirm')),
             reset_password_token.key)
@@ -37,9 +38,10 @@ def password_reset_token_created(sender, instance, reset_password_token, *args, 
     mail = send_mail(
         subject="Password Reset for {title}".format(title="Your Website Title"),
         message=email_plaintext_message,
+        html_message=email_html_message,
         from_email=settings.EMAIL_HOST_USER,
         recipient_list=[reset_password_token.user.email],
-        fail_silently=False
+        fail_silently=True
     )
     # msg.attach_alternative(email_html_message, "text/html")
     # msg.send()
