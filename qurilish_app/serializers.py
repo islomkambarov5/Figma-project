@@ -1,6 +1,24 @@
 from django.contrib.auth.models import User
+from rest_framework.fields import HiddenField, CurrentUserDefault
 from rest_framework.serializers import ModelSerializer
 from rest_framework import serializers
+
+from qurilish_app.models import Posts, Comments
+
+
+class PostSerializer(ModelSerializer):
+    class Meta:
+        model = Posts
+        fields = ["id", "title", "context", "get_absolute_url"]
+
+
+class CommentSerializer(ModelSerializer):
+    user = HiddenField(default=CurrentUserDefault())
+    post = HiddenField(default=None)
+
+    class Meta:
+        model = Comments
+        fields = ["user", "text", "post", "created_at"]
 
 
 class LogInSerializer(ModelSerializer):
