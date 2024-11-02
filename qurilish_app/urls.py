@@ -9,7 +9,8 @@ from rest_framework_simplejwt.views import (
 urlpatterns = [
     path('', PostAPIView.as_view(), name='index'),
     path('post/<slug:slug>/', PostDetailAPIView.as_view(), name='post_detail'),
-    path('post/<slug:slug>/update', PostUpdateAPIView.as_view(), name='post_update'),
+    path('post/<slug:slug>/update/', PostUpdateAPIView.as_view(), name='post_update'),
+    path('post/<slug:slug>/like/', PostLikeAPIView, name='post_like'),
     path('auth/', RegisterApiView.as_view()),
     path('login/', LoginApiView.as_view()),
     path('change_password/', PasswordChangeApiView.as_view(), name='change_password'),

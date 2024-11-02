@@ -1,5 +1,5 @@
 from django.contrib.auth import authenticate, update_session_auth_hash, login, logout
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 
 # Create your views here.
 from django.utils.timezone import now
@@ -10,18 +10,13 @@ from rest_framework.generics import GenericAPIView, RetrieveAPIView, ListAPIView
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from qurilish_app.models import Posts, Comments
+from qurilish_app.models import *
 from qurilish_app.serializers import LogInSerializer, RegisterSerializer, PasswordChangeSerializer, PostSerializer, \
     CommentSerializer
+from django.db.models import Count
 
 
 class IsOwnerOrReadOnly(permissions.BasePermission):
-    # def has_permission(self, request, view):
-    #     # Allow authenticated users to create new instances via POST
-    #     if request.method == "POST" and request.user.is_authenticated:
-    #         return True
-    #     return True
-
     def has_permission(self, request, view):
         return bool(
             request.method in permissions.SAFE_METHODS or
@@ -34,10 +29,6 @@ class IsOwnerOrReadOnly(permissions.BasePermission):
             request.method in permissions.SAFE_METHODS or
             obj.author == request.user
         )
-        # if request.method in permissions.SAFE_METHODS:
-        #     return True
-
-        # return obj.author == request.user
 
 
 @permission_classes([permissions.AllowAny])
@@ -111,10 +102,43 @@ class PasswordChangeApiView(GenericAPIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-@permission_classes([permissions.AllowAny])
-class PostAPIView(ListAPIView):
+@permission_classes([permissions.IsAuthenticatedOrReadOnly])
+class PostAPIView(GenericAPIView):
     queryset = Posts.objects.all()
     serializer_class = PostSerializer
+
+    def get(self, *args, **kwargs):
+        posts = Posts.objects.annotate(total_likes=Count('likes')).order_by('-total_likes')
+        host_domain = self.request.get_host()
+        post_responive = []
+        print(posts)
+        for post in posts:
+            print(1)
+            post_responive.append({
+                'id': post.id,
+                'title': post.title,
+                'context': post.context,
+                'created at': f'{post.created_at.year} year {post.created_at.month} month {post.created_at.day} day',
+                'ago': f'{(now() - post.created_at).days} days ago',
+                "author's email": post.author.username,
+                'url': f'http://{host_domain}/api/post/{post.slug}',
+                'likes': Likes.objects.filter(post=post).count(),
+            })
+        context = {'posts': post_responive}
+        return Response(context)
+
+    def post(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return Response({'error': 'Только зарегистрированные пользователи могут создавать посты.'},
+                            status=status.HTTP_401_UNAUTHORIZED)
+
+        data = request.data
+        serializer = PostSerializer(data=data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response({'status': status.HTTP_201_CREATED})
+        else:
+            return Response({'status': status.HTTP_404_NOT_FOUND})
 
 
 @permission_classes([IsOwnerOrReadOnly])
@@ -127,11 +151,18 @@ class PostDetailAPIView(RetrieveDestroyAPIView):
     def get(self, *args, **kwargs):
         post = Posts.objects.get(slug=self.kwargs['slug'])
         comments = Comments.objects.filter(post=post)
+        for comment in comments:
+            comment.created_at = f'{(now() - post.created_at).days} days ago'
         serialized_comments = CommentSerializer(comments, many=True)
+        likes = Likes.objects.filter(post=post)
         return Response({
             'id': post.id,
             'title': post.title,
             'context': post.context,
+            'likes': likes.count(),
+            'created at': f'{post.created_at.year} year {post.created_at.month} month {post.created_at.day} day',
+            'author': post.author.username,
+            'like post': f'http://{self.request.get_host()}/api/post/{post.slug}/like',
             'comments': serialized_comments.data
         })
 
@@ -143,7 +174,6 @@ class PostDetailAPIView(RetrieveDestroyAPIView):
         data = request.data
         serializer = CommentSerializer(data=data, context={'request': request})
         if serializer.is_valid():
-            user = request.user
             post = Posts.objects.get(slug=self.kwargs["slug"])
             serializer.save(post=post)
             return Response({'status': status.HTTP_201_CREATED})
@@ -156,3 +186,16 @@ class PostUpdateAPIView(RetrieveUpdateAPIView):
     queryset = Posts.objects.all()
     serializer_class = PostSerializer
     lookup_field = "slug"
+
+
+def PostLikeAPIView(request, slug):
+    if not request.user.is_authenticated:
+        return Response({'error': 'Только зарегистрированные пользователи могут лайкать посты.'},
+                        status=status.HTTP_401_UNAUTHORIZED)
+
+    post = Posts.objects.get(slug=slug)
+    like, create = Likes.objects.get_or_create(post=post, user=request.user)
+    if not create:
+        like.delete()
+        
+    return redirect('post_detail', slug=slug)

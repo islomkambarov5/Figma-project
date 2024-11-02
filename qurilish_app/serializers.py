@@ -7,9 +7,11 @@ from qurilish_app.models import Posts, Comments
 
 
 class PostSerializer(ModelSerializer):
+    author = HiddenField(default=CurrentUserDefault())
+
     class Meta:
         model = Posts
-        fields = ["id", "title", "context", "get_absolute_url"]
+        fields = ["title", "context", 'author']
 
 
 class CommentSerializer(ModelSerializer):
